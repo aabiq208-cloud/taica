@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>我的小營地｜露營佈置與打包清單</title>
+<meta name="description" content="點選露營裝備佈置你的營地，再自動產生一份打包清單。">
+<style>
+:root{
+  --bg:#F1E6D3; --panel:#FBF6EC; --card:#FFFDF8; --line:#E6D7BF;
+  --ink:#3F3A36; --ink2:#7E7163;
+  --sage:#3FAE9C; --sage-d:#2A8475; --sage-l:#D3EEE8;
+  --rose:#E0605A; --rose-l:#F9E2DD; --sand:#F2AE3E;
+  --radius:18px;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+.wrap{max-width:1040px;margin:0 auto;padding:22px 16px 40px}
+
+/* header */
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;margin-bottom:16px}
+.brand h1{margin:0;font-size:28px;letter-spacing:.08em;font-weight:700}
+.brand p{margin:2px 0 0;color:var(--ink2);font-size:14px}
+.steps{display:flex;gap:6px;list-style:none;margin:0;padding:0;flex-wrap:wrap}
+.steps button{display:flex;align-items:center;gap:6px;border:1px solid var(--line);background:transparent;border-radius:999px;padding:5px 12px 5px 6px;font-size:13px;color:var(--ink2);cursor:pointer}
+.steps b{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--line);color:var(--ink);font-size:12px}
+.steps button.on{background:var(--panel);border-color:var(--sage);color:var(--ink)}
+.steps button.on b{background:var(--sage-d);color:#fff}
+
+/* stage */
+.stage{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:10px;box-shadow:0 8px 24px rgba(74,69,64,.08)}
+.stage-bar{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:2px 4px 10px;min-height:44px}
+.stage-bar .label{font-size:14px;color:var(--ink2)}
+.stage-bar h2{margin:0;font-size:20px;letter-spacing:.06em}
+.acts{display:flex;gap:8px}
+.scene-box{position:relative;border-radius:12px;overflow:hidden;aspect-ratio:5/3;background:#EEDDC4}
+#scene{display:block;width:100%;height:100%;touch-action:none;user-select:none;-webkit-user-select:none}
+.obj{cursor:grab}
+.obj.dragging{cursor:grabbing}
+.surf{fill:#F6D27A;opacity:0;transition:opacity .15s}
+.obj.droppable .surf{opacity:.35}
+.obj.drop .surf{opacity:.85}
+.sel{fill:none;stroke:#4A4540;stroke-width:2;stroke-dasharray:7 6;vector-effect:non-scaling-stroke;opacity:.65}
+.anim{transform-box:fill-box;transform-origin:50% 100%}
+.anim.pop{animation:pop .45s cubic-bezier(.3,1.6,.5,1)}
+@keyframes pop{0%{transform:scale(.2);opacity:0}60%{transform:scale(1.08,.92);opacity:1}80%{transform:scale(.97,1.04)}100%{transform:scale(1)}}
+.anim.grab{animation:grab .22s ease-out}
+@keyframes grab{0%{transform:scale(1)}45%{transform:scale(.9,1.1)}100%{transform:scale(1)}}
+.anim.swap{animation:swap .35s cubic-bezier(.3,1.6,.5,1)}
+@keyframes swap{from{transform:scale(.2);opacity:0}to{transform:scale(1);opacity:1}}
+.anim.jelly{animation:jelly .6s ease-out}
+@keyframes jelly{0%{transform:scale(1)}22%{transform:scale(1.12,.86)}42%{transform:scale(.93,1.09)}62%{transform:scale(1.04,.97)}82%{transform:scale(.99,1.01)}100%{transform:scale(1)}}
+.flame{transform-box:fill-box;transform-origin:50% 100%;animation:flick 1.1s ease-in-out infinite alternate}
+@keyframes flick{from{transform:scale(1,1)}to{transform:scale(.93,1.08)}}
+.hint{position:absolute;left:0;right:0;bottom:14px;text-align:center;pointer-events:none}
+.hint span{display:inline-block;background:rgba(246,242,236,.92);border:1px solid var(--line);border-radius:999px;padding:6px 16px;font-size:14px;color:var(--ink2)}
+
+/* floating toolbar */
+.tool{position:absolute;top:10px;left:50%;transform:translateX(-50%);max-width:calc(100% - 12px);overflow-x:auto;display:none;align-items:center;gap:6px;padding:6px 8px 6px 14px;background:var(--panel);border:1px solid var(--line);border-radius:999px;box-shadow:0 6px 16px rgba(74,69,64,.16);z-index:5;white-space:nowrap;font-size:13px}
+.tool.show{display:flex}
+.tool .nm{font-weight:600;margin-right:2px}
+.dot{width:22px;height:22px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px var(--line);cursor:pointer;padding:0}
+.dot.on{box-shadow:0 0 0 2px var(--ink)}
+.tbtn{border:none;background:transparent;border-radius:999px;padding:4px 10px;cursor:pointer;font-size:13px}
+.tbtn:hover{background:var(--sage-l)}
+.tbtn.del:hover{background:var(--rose-l)}
+.sep{width:1px;height:18px;background:var(--line)}
+
+/* buttons */
+.btn{border:1px solid var(--line);background:var(--card);padding:8px 16px;border-radius:999px;font-size:14px;cursor:pointer;transition:background .15s}
+.btn:hover{background:#fff}
+.btn.primary{background:var(--sage-d);border-color:var(--sage-d);color:#fff}
+.btn.primary:hover{background:#23705F}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+/* panel */
+.panel{margin-top:14px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:0 0 auto;border:1px solid var(--line);background:transparent;color:var(--ink2);padding:6px 16px;border-radius:999px;font-size:14px;cursor:pointer}
+.tab.on{background:var(--sage);border-color:var(--sage);color:#fff}
+.cards{display:flex;gap:10px;overflow-x:auto;padding:12px 2px 6px}
+.card{flex:0 0 auto;width:112px;border:1px solid var(--line);background:var(--card);border-radius:14px;padding:8px 8px 8px;cursor:pointer;position:relative;text-align:center;transition:transform .15s,box-shadow .15s}
+.card:hover{transform:translateY(-2px);box-shadow:0 6px 14px rgba(74,69,64,.1)}
+.card svg{width:100%;height:66px;display:block}
+.card .cn{font-size:14px;margin-top:4px}
+.card .badge{position:absolute;top:6px;right:6px;background:var(--rose);color:#fff;font-size:12px;line-height:20px;border-radius:999px;padding:0 7px;min-width:22px}
+.card.max{opacity:.45}
+.card.scene{width:168px}
+.card.scene svg{height:auto;aspect-ratio:5/3;border-radius:8px}
+.card.on{border-color:var(--sage-d);box-shadow:0 0 0 2px var(--sage-l)}
+.panel-note{margin:4px 2px 0;font-size:13px;color:var(--ink2)}
+
+/* done */
+#done{display:none}
+.view-done #done{display:block}
+.view-done #build{display:none}
+.done-head{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between}
+.field label{display:block;font-size:13px;color:var(--ink2);margin-bottom:4px}
+.field input{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:8px 12px;font-size:15px;width:240px;max-width:100%;color:var(--ink)}
+.done-actions{display:flex;flex-wrap:wrap;gap:8px}
+.progress{margin:18px 0 4px;display:flex;align-items:center;gap:12px;font-size:14px;color:var(--ink2)}
+.bar{flex:1;height:8px;background:var(--line);border-radius:999px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--sage-d);border-radius:999px;transition:width .3s}
+.groups{columns:3 220px;column-gap:24px}
+.group{break-inside:avoid;margin:14px 0 4px}
+.group h3{font-size:13px;color:var(--ink2);margin:0 0 4px;font-weight:600;letter-spacing:.08em}
+.check{display:flex;gap:10px;align-items:center;padding:3px 0;cursor:pointer;font-size:15px}
+.check input{accent-color:var(--sage-d);width:18px;height:18px;margin:0}
+.check.ok span{color:var(--ink2);text-decoration:line-through}
+.row{display:flex;align-items:center;gap:4px;border-radius:8px;margin:0 -6px;padding:0 6px}
+.row:hover{background:rgba(220,211,199,.35)}
+.row .check{flex:1;min-width:0}
+.rm{flex:0 0 auto;width:28px;height:28px;border:none;background:transparent;border-radius:50%;color:var(--ink2);cursor:pointer;opacity:0;transition:opacity .15s}
+.row:hover .rm,.rm:focus-visible{opacity:1}
+.rm:hover{background:var(--rose-l);color:#8C6A5E}
+@media (hover:none){.rm{opacity:.55}}
+.add{display:flex;align-items:center;gap:8px;border:none;background:transparent;color:var(--sage-d);font-size:14px;padding:4px 0;cursor:pointer}
+.add b{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:5px;border:1.5px dashed var(--sage);font-weight:600;line-height:1}
+.add:hover{text-decoration:underline}
+.addf{display:flex;gap:6px;margin:4px 0}
+.addf input{flex:1;min-width:0;border:1px solid var(--sage);background:#fff;border-radius:8px;padding:5px 10px;font-size:14px;color:var(--ink)}
+.addf button{border:none;background:var(--sage-d);color:#fff;border-radius:8px;padding:5px 12px;font-size:13px;cursor:pointer}
+.linkbtn{border:none;background:transparent;color:var(--ink2);font-size:13px;text-decoration:underline;cursor:pointer;padding:0;margin-top:10px}
+.note{margin-top:14px;font-size:13px;color:#8C6A5E;background:var(--rose-l);border-radius:10px;padding:8px 12px}
+
+footer{margin-top:22px;text-align:center;font-size:12px;color:var(--ink2)}
+footer a{color:inherit}
+
+.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);display:flex;align-items:center;gap:14px;background:var(--ink);color:#fff;padding:8px 18px;max-width:calc(100% - 32px);border-radius:999px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:20}
+.toast.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.toast button{border:none;background:transparent;color:#F1DBA4;font-size:14px;font-weight:600;cursor:pointer;padding:0}
+
+@media (max-width:600px){
+  .brand h1{font-size:22px}
+  .steps button{padding:4px 8px 4px 4px;font-size:12px}
+  .stage{padding:8px}
+  .btn{padding:7px 12px;font-size:13px}
+  .card{width:96px}
+  .card svg{height:56px}
+  .card.scene{width:140px}
+  .tool .nm{display:none}
+  .tool{padding-left:8px;top:6px}
+}
+@media (prefers-reduced-motion:reduce){
+  .anim.pop,.anim.grab,.anim.jelly,.anim.swap,.flame{animation:none}
+  .card,.toast{transition:none}
+}
+@media print{
+  body{background:#fff}
+  .steps,.acts,#build,.done-actions,.field,.tool,.hint,footer,.toast,.rm,.add,.addf,.linkbtn{display:none!important}
+  .stage,.panel{box-shadow:none;border:none;padding:0}
+  .groups{columns:3}
+}
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <header>
+    <div class="brand">
+      <h1>我的小營地</h1>
+      <p>挑選裝備佈置你的營地，完成後自動產生打包清單</p>
+    </div>
+    <ol class="steps" id="steps">
+      <li><button data-step="1"><b>1</b>選場地</button></li>
+      <li><button data-step="2"><b>2</b>選裝備</button></li>
+      <li><button data-step="3"><b>3</b>拖曳調整</button></li>
+      <li><button data-step="4"><b>4</b>完成</button></li>
+    </ol>
+  </header>
+
+  <section class="stage">
+    <div class="stage-bar">
+      <div id="barLeft"></div>
+      <div class="acts" id="acts">
+        <button class="btn" id="btnClear">清空</button>
+        <button class="btn primary" id="btnDone">完成</button>
+      </div>
+    </div>
+    <div class="scene-box" id="sceneBox">
+      <svg id="scene" viewBox="0 0 1000 600" xmlns="http://www.w3.org/2000/svg" aria-label="營地場景"><g id="bg"></g><g id="objs"></g></svg>
+      <div class="hint" id="hint"><span>從下方挑選裝備，放進你的營地</span></div>
+      <div class="tool" id="tool"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="build">
+    <div class="tabs" id="tabs"></div>
+    <div class="cards" id="cards"></div>
+    <p class="panel-note" id="panelNote"></p>
+  </section>
+
+  <section class="panel" id="done">
+    <div class="done-head">
+      <div class="field">
+        <label for="campName">營地名稱</label>
+        <input id="campName" maxlength="20" placeholder="我的小營地">
+      </div>
+      <div class="done-actions">
+        <button class="btn" id="btnBack">繼續佈置</button>
+        <button class="btn" id="btnCopy">複製清單</button>
+        <button class="btn" id="btnPrint">列印</button>
+        <button class="btn primary" id="btnPng">下載營地圖片</button>
+      </div>
+    </div>
+    <div class="progress"><span id="progText">已打包 0 / 0</span><div class="bar"><i id="progBar"></i></div></div>
+    <div class="groups" id="groups"></div>
+    <button class="linkbtn" id="btnRestore" hidden></button>
+    <div class="note" id="fireNote" hidden>生火前請先確認營區規定，離開前務必確實熄火。</div>
+  </section>
+
+  <footer>僅供佈置與打包參考，實際裝備請依營地與天氣調整 · 互動靈感來自 <a href="https://fori-flower-studio.com/" target="_blank" rel="noopener">FORi Flower 線上插花體驗</a></footer>
+</div>
+<div class="toast" id="toast" role="status"><span></span><button type="button" hidden></button></div>
+
+<script>
+/* ---------- 基本工具 ---------- */
+const $ = s => document.querySelector(s);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function rng(seed){ let s = seed; return () => (s = (s * 16807) % 2147483647) / 2147483647; }
+
+/* ---------- 插圖共用（扁平色塊風格：不描邊，用深淺兩色做出立體感） ---------- */
+const DK = '#3B3936', CREAM = '#F7F0E3', HUB = '#E9E1D3', GLASS = '#4A5157', GLASS_L = '#6E7A82';
+const WOOD = '#D4A574', WOOD_M = '#B5895F', WOOD_D = '#946A45';
+const S = '';   // 不描邊
+const L = (w = 3, c = DK) => `stroke="${c}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round" fill="none"`;
+function tone(hex, k){ // k < 0 變深，k > 0 變淺
+  const n = parseInt(hex.slice(1), 16), rgb = [n >> 16, n >> 8 & 255, n & 255];
+  return '#' + rgb.map(v => Math.round(k < 0 ? v * (1 + k) : v + (255 - v) * k)).map(v => v.toString(16).padStart(2, '0')).join('');
+}
+const wheel = (x, y, r) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${DK}"/><circle cx="${x}" cy="${y}" r="${r * .46}" fill="${HUB}"/><circle cx="${x}" cy="${y}" r="${r * .16}" fill="${DK}"/>`;
+
+const TRI = [['terra', '#E0605A', '珊瑚紅'], ['blue', '#3E70AA', '海軍藍'], ['sage', '#4DBFAE', '湖水綠'], ['sand', '#F2AE3E', '芥末黃']];
+const DOGC = [['tan', '#D9A066', '柴犬色'], ['cream', '#F3E6CF', '奶油']];
+
+/* ---------- 裝備插圖（原點在物件底部中心，往上為負） ---------- */
+const DRAW = {
+  car: c => `
+    <rect x="-56" y="-116" width="104" height="6" rx="3" fill="${DK}"/>
+    <path d="M-40,-110 L-40,-104 M30,-110 L30,-104" ${L(4)}/>
+    <path d="M-84,-58 L-64,-100 Q-61,-106 -54,-106 L56,-106 Q64,-106 68,-99 L90,-58 Z" fill="${c}"/>
+    <rect x="-112" y="-62" width="224" height="44" rx="12" fill="${c}"/>
+    <rect x="-112" y="-34" width="224" height="16" rx="6" fill="${tone(c, -.16)}"/>
+    <path d="M-70,-62 L-55,-96 L-6,-96 L-6,-62 Z" fill="${GLASS}"/>
+    <path d="M4,-62 L4,-96 L56,-96 L76,-62 Z" fill="${GLASS}"/>
+    <path d="M-48,-96 L-38,-96 L-52,-62 L-62,-62 Z M14,-96 L22,-96 L12,-62 L4,-62 Z" fill="${GLASS_L}"/>
+    <path d="M-1,-60 L-1,-30" ${L(2, tone(c, -.25))}/>
+    <rect x="-24" y="-54" width="12" height="4" rx="2" fill="${tone(c, -.3)}"/><rect x="40" y="-54" width="12" height="4" rx="2" fill="${tone(c, -.3)}"/>
+    <circle cx="100" cy="-46" r="8" fill="#FFF3C4"/>
+    <rect x="-112" y="-52" width="7" height="12" rx="2" fill="#C94545"/>
+    <rect x="-118" y="-30" width="18" height="9" rx="4" fill="${HUB}"/><rect x="100" y="-30" width="18" height="9" rx="4" fill="${HUB}"/>
+    <circle cx="-64" cy="-20" r="25" fill="${tone(c, -.4)}"/><circle cx="66" cy="-20" r="25" fill="${tone(c, -.4)}"/>
+    ${wheel(-64, -20, 20)}${wheel(66, -20, 20)}`,
+  scooter: c => `
+    ${wheel(-46, -15, 15)}${wheel(46, -15, 15)}
+    <path d="M48,-30 L46,-15" ${L(4)}/>
+    <path d="M28,-22 C31,-40 61,-40 64,-22 L58,-22 C55,-32 37,-32 34,-22 Z" fill="${c}"/>
+    <path d="M-72,-62 L-50,-62 M-68,-62 L-66,-50" ${L(3)}/>
+    <rect x="-86" y="-88" width="34" height="26" rx="5" fill="${HUB}"/>
+    <rect x="-86" y="-88" width="34" height="7" rx="3" fill="${tone(HUB, -.12)}"/>
+    <path d="M-72,-28 C-77,-50 -63,-62 -38,-62 L-4,-62 C4,-62 6,-56 4,-48 L2,-37 L24,-37 L26,-28 Z" fill="${c}"/>
+    <path d="M-70,-30 C-72,-38 -70,-44 -64,-48 L-20,-48 L-20,-30 Z" fill="${tone(c, -.14)}"/>
+    <rect x="-4" y="-40" width="30" height="7" rx="3" fill="${CREAM}"/>
+    <rect x="-78" y="-46" width="7" height="9" rx="2" fill="#C94545"/>
+    <path d="M18,-30 C18,-56 26,-80 38,-93 L48,-93 C50,-70 52,-48 50,-30 Z" fill="${c}"/>
+    <path d="M34,-30 C34,-56 40,-78 46,-92 L48,-93 C50,-70 52,-48 50,-30 Z" fill="${tone(c, -.14)}"/>
+    <path d="M-62,-62 C-62,-72 -50,-75 -36,-74 L-8,-71 C-2,-70 0,-66 -2,-62 Z" fill="#5A4636"/>
+    <path d="M24,-98 L64,-98" ${L(4)}/>
+    <rect x="32" y="-104" width="26" height="13" rx="6.5" fill="${c}"/>
+    <path d="M38,-104 L33,-118" ${L(3)}/>
+    <circle cx="32" cy="-121" r="5" fill="${HUB}"/>
+    <circle cx="59" cy="-90" r="9" fill="${HUB}"/>
+    <circle cx="59" cy="-90" r="6" fill="#FFF3C4"/>`,
+  camper: c => `
+    <path d="M-118,-156 L-118,-166 M36,-156 L36,-166" ${L(3)}/><rect x="-128" y="-170" width="176" height="5" rx="2.5" fill="${DK}"/>
+    <path d="M-150,-34 L-150,-140 Q-150,-156 -134,-156 L88,-156 Q102,-156 108,-142 L128,-98 Q150,-93 150,-72 L150,-34 Z" fill="${CREAM}"/>
+    <path d="M60,-156 L88,-156 Q102,-156 108,-142 L128,-98 Q150,-93 150,-72 L150,-34 L60,-34 Z" fill="${tone(CREAM, -.06)}"/>
+    <rect x="-150" y="-70" width="300" height="20" fill="${c}"/>
+    <rect x="-150" y="-50" width="300" height="16" fill="${tone(c, -.18)}"/>
+    <rect x="-128" y="-136" width="58" height="40" rx="7" fill="${GLASS}"/>
+    <rect x="-56" y="-136" width="58" height="40" rx="7" fill="${GLASS}"/>
+    <path d="M-118,-136 L-104,-136 L-120,-96 L-128,-96 L-128,-112 Z M-46,-136 L-34,-136 L-50,-96 L-56,-96 L-56,-110 Z" fill="${GLASS_L}"/>
+    <rect x="20" y="-136" width="38" height="102" rx="5" fill="${tone(CREAM, -.1)}"/>
+    <circle cx="50" cy="-90" r="3" fill="${DK}"/>
+    <path d="M84,-142 L101,-142 L120,-100 L84,-100 Z" fill="${GLASS}"/>
+    <circle cx="140" cy="-82" r="7" fill="#FFF3C4"/>
+    <circle cx="-96" cy="-24" r="29" fill="${tone(c, -.4)}"/><circle cx="96" cy="-24" r="29" fill="${tone(c, -.4)}"/>
+    ${wheel(-96, -24, 24)}${wheel(96, -24, 24)}`,
+  dome: c => `
+    <path d="M-126,0 L-96,-36 M126,0 L96,-36" ${L(1.5, 'rgba(59,57,54,.6)')}/>
+    <path d="M-102,0 C-102,-80 -60,-130 0,-132 C60,-130 102,-80 102,0 Z" fill="${c}"/>
+    <path d="M0,-132 C60,-130 102,-80 102,0 L0,0 Z" fill="${tone(c, -.15)}"/>
+    <path d="M-38,0 C-38,-50 -24,-84 0,-86 C24,-84 38,-50 38,0 Z" fill="${DK}"/>
+    <path d="M0,-86 C20,-82 34,-50 37,0 L15,0 C15,-40 9,-70 0,-86 Z" fill="${tone(c, .18)}"/>
+    <path d="M-60,-20 L-46,-20" ${L(3, tone(c, -.25))}/>
+    <path d="M-132,0 L-120,0 M120,0 L132,0" ${L(3)}/>`,
+  tunnel: c => `
+    <path d="M-150,0 L-128,-40 M150,0 L130,-50" ${L(1.5, 'rgba(59,57,54,.6)')}/>
+    <path d="M-135,0 C-135,-55 -112,-82 -72,-86 L40,-112 C100,-116 135,-72 135,0 Z" fill="${c}"/>
+    <path d="M-135,0 C-135,-55 -112,-82 -72,-86 L-72,0 Z" fill="${tone(c, -.15)}"/>
+    <path d="M-14,0 L-14,-99 L46,-112 L46,0 Z" fill="${tone(c, -.08)}"/>
+    <path d="M-72,0 L-72,-86 M-14,0 L-14,-99 M46,0 L46,-112" ${L(4, tone(c, -.28))}/>
+    <path d="M76,0 C76,-46 90,-76 108,-80 C124,-66 129,-36 129,0 Z" fill="${DK}"/>
+    <path d="M-156,0 L-144,0 M144,0 L156,0" ${L(3)}/>`,
+  tarp: c => `
+    <path d="M-112,0 L-112,-128 M112,0 L112,-150" ${L(5, '#7A6A5C')}/>
+    <path d="M-140,-112 L-168,0 M140,-146 L168,0" ${L(1.5, 'rgba(59,57,54,.6)')}/>
+    <path d="M-140,-112 Q-10,-170 140,-146 L124,-100 Q0,-118 -124,-78 Z" fill="${c}"/>
+    <path d="M-124,-78 Q0,-118 124,-100 L120,-90 Q0,-106 -122,-68 Z" fill="${tone(c, -.25)}"/>
+    <path d="M-6,-152 L-2,-110" ${L(3, tone(c, -.15))}/>
+    <path d="M-174,0 L-162,0 M162,0 L174,0" ${L(3)}/>`,
+  cot: () => `
+    <path d="M-62,-30 L-42,0 M-42,-30 L-62,0 M42,-30 L62,0 M62,-30 L42,0" ${L(4)}/>
+    <rect x="-78" y="-38" width="156" height="12" rx="5" fill="#3E9C6B"/>
+    <rect x="-66" y="-59" width="108" height="23" rx="11.5" fill="#F2AE3E"/>
+    <rect x="-66" y="-47" width="108" height="11" rx="5.5" fill="${tone('#F2AE3E', -.12)}"/>
+    <path d="M-30,-58 L-30,-37" ${L(2.5, tone('#F2AE3E', -.25))}/>
+    <ellipse cx="56" cy="-48" rx="17" ry="10" fill="${CREAM}"/>`,
+  table: () => `
+    <rect x="-52" y="-56" width="8" height="56" rx="2" fill="${WOOD_D}"/>
+    <rect x="44" y="-56" width="8" height="56" rx="2" fill="${WOOD_D}"/>
+    <path d="M-44,-22 L44,-22" ${L(4, WOOD_D)}/>
+    <rect x="-64" y="-67" width="128" height="9" rx="3" fill="${WOOD}"/>
+    <rect x="-64" y="-59" width="128" height="6" rx="2" fill="${WOOD_M}"/>
+    <path d="M-32,-67 L-32,-58 M0,-67 L0,-58 M32,-67 L32,-58" ${L(1.5, WOOD_M)}/>`,
+  chair: c => `
+    <path d="M-20,-32 L18,0 M20,-32 L-18,0" ${L(4)}/>
+    <path d="M-22,-79 L22,-79 L20,-40 L-20,-40 Z" fill="${c}"/>
+    <path d="M-22,-79 L22,-79 L21,-70 L-21,-70 Z" fill="${tone(c, .2)}"/>
+    <path d="M-27,-43 L27,-43 L23,-28 L-23,-28 Z" fill="${tone(c, -.2)}"/>
+    <path d="M-33,-57 L-21,-57 M21,-57 L33,-57" ${L(5)}/>
+    <path d="M-29,-57 L-26,-43 M29,-57 L26,-43" ${L(3.5)}/>`,
+  hammock: () => `
+    <path d="M-105,0 L105,0" ${L(6, WOOD_D)}/>
+    <path d="M-100,0 L-82,-92 M100,0 L82,-92" ${L(6, WOOD_M)}/>
+    <path d="M-82,-90 Q0,-10 82,-90 Q0,-44 -82,-90 Z" fill="#E0605A"/>
+    <path d="M-60,-74 Q0,-30 60,-74" ${L(4, CREAM)}/>
+    <path d="M-70,-82 Q0,-38 70,-82" ${L(2, tone('#E0605A', -.2))}/>`,
+  stove: () => `
+    <path d="M0,-34 C-8,-41 -5,-47 0,-52 C5,-47 8,-41 0,-34 Z" fill="#7FB8E8"/>
+    <path d="M-18,-26 L-18,-34 M18,-26 L18,-34 M-24,-34 L24,-34" ${L(3)}/>
+    <rect x="-36" y="-26" width="72" height="26" rx="6" fill="#3E70AA"/>
+    <rect x="-36" y="-10" width="72" height="10" rx="4" fill="${tone('#3E70AA', -.18)}"/>
+    <rect x="-28" y="-21" width="22" height="11" rx="3" fill="${CREAM}"/>
+    <circle cx="20" cy="-14" r="5.5" fill="${HUB}"/>`,
+  pot: () => `
+    <path d="M-10,-64 q-6,-7 0,-14 q6,-7 0,-14 M10,-64 q-6,-7 0,-14" ${L(3, 'rgba(255,255,255,.85)')}/>
+    <path d="M-30,-34 L-40,-34 M30,-34 L40,-34" ${L(4)}/>
+    <path d="M-30,-44 L30,-44 L26,-6 Q25,0 19,0 L-19,0 Q-25,0 -26,-6 Z" fill="#A7B2BA"/>
+    <path d="M6,-44 L30,-44 L26,-6 Q25,0 19,0 L6,0 Z" fill="${tone('#A7B2BA', -.12)}"/>
+    <ellipse cx="0" cy="-45" rx="33" ry="7" fill="#C9D1D6"/>
+    <circle cx="0" cy="-54" r="5" fill="${DK}"/>`,
+  cooler: () => `
+    <rect x="-46" y="-56" width="92" height="56" rx="9" fill="#4DBFAE"/>
+    <rect x="10" y="-56" width="36" height="56" rx="9" fill="${tone('#4DBFAE', -.14)}"/>
+    <rect x="-50" y="-64" width="100" height="16" rx="6" fill="${CREAM}"/>
+    <path d="M-22,-64 Q0,-80 22,-64" ${L(4)}/>
+    <rect x="-14" y="-40" width="28" height="8" rx="3" fill="${CREAM}"/>`,
+  lantern: () => `
+    <circle cx="0" cy="-30" r="30" fill="#FFE9A8" opacity=".45"/>
+    <path d="M-7,-54 Q0,-66 7,-54" ${L(3)}/>
+    <rect x="-14" y="-10" width="28" height="10" rx="3" fill="${DK}"/>
+    <rect x="-11" y="-44" width="22" height="34" rx="6" fill="#FFE38A"/>
+    <rect x="2" y="-44" width="9" height="34" rx="4" fill="#F5CF63"/>
+    <path d="M-15,-44 L15,-44 L8,-54 L-8,-54 Z" fill="${DK}"/>`,
+  string: () => {
+    const cols = ['#FFD25A', '#E0605A', '#4DBFAE'];
+    let bulbs = '';
+    for (let i = 1; i <= 9; i++) {
+      const t = i / 10, u = 1 - t;
+      const x = u * u * -112 + t * t * 112;
+      const y = u * u * -104 + 2 * u * t * -40 + t * t * -104;
+      bulbs += `<circle cx="${x.toFixed(1)}" cy="${(y + 8).toFixed(1)}" r="7" fill="${cols[i % 3]}"/>`;
+    }
+    return `
+    <path d="M-112,0 L-112,-112 M112,0 L112,-112" ${L(5, WOOD_M)}/>
+    <path d="M-112,-104 Q0,-40 112,-104" ${L(2)}/>${bulbs}`;
+  },
+  fire: () => `
+    <circle cx="0" cy="-32" r="54" fill="#FFD25A" opacity=".22"/>
+    <path d="M-42,-10 L36,-26 L40,-16 L-38,0 Z" fill="${WOOD_D}"/>
+    <path d="M42,-10 L-36,-26 L-40,-16 L38,0 Z" fill="${WOOD_M}"/>
+    <g class="flame">
+      <path d="M0,-84 C22,-62 32,-46 24,-28 C18,-16 -18,-16 -24,-28 C-32,-46 -16,-58 0,-84 Z" fill="#F2763A"/>
+      <path d="M2,-58 C12,-46 15,-36 10,-26 C6,-20 -6,-20 -10,-26 C-13,-34 -6,-44 2,-58 Z" fill="#FFD25A"/>
+    </g>
+    <ellipse cx="-40" cy="-6" rx="13" ry="8" fill="#B3A899"/>
+    <ellipse cx="-14" cy="-2" rx="13" ry="8" fill="#C9BFB2"/>
+    <ellipse cx="14" cy="-2" rx="13" ry="8" fill="#B3A899"/>
+    <ellipse cx="40" cy="-6" rx="13" ry="8" fill="#C9BFB2"/>`,
+  dog: c => `
+    <path d="M-30,-30 Q-50,-38 -46,-56" ${L(6, c)}/>
+    <rect x="-36" y="-16" width="18" height="16" rx="7" fill="${tone(c, -.14)}"/>
+    <rect x="21" y="-32" width="10" height="32" rx="5" fill="${tone(c, -.14)}"/>
+    <ellipse cx="-6" cy="-28" rx="30" ry="21" fill="${c}"/>
+    <ellipse cx="-4" cy="-20" rx="20" ry="10" fill="${tone(c, .45)}"/>
+    <rect x="8" y="-32" width="10" height="32" rx="5" fill="${c}"/>
+    <circle cx="24" cy="-54" r="16" fill="${c}"/>
+    <ellipse cx="39" cy="-49" rx="11" ry="8" fill="${tone(c, .45)}"/>
+    <circle cx="48" cy="-51" r="3.5" fill="${DK}"/>
+    <circle cx="28" cy="-58" r="2.8" fill="${DK}"/>
+    <path d="M12,-68 L8,-50 L20,-60 Z" fill="${tone(c, -.3)}"/>
+    <path d="M13,-40 Q22,-35 34,-39" ${L(5, '#E0605A')}/>`,
+  guitar: () => `
+    <path d="M-16,0 L0,-14 L16,0" ${L(3)}/>
+    <rect x="-4" y="-118" width="8" height="64" rx="2" fill="#7A5238"/>
+    <rect x="-7" y="-132" width="14" height="16" rx="3" fill="#5A3C29"/>
+    <circle cx="0" cy="-34" r="22" fill="#E3943E"/>
+    <circle cx="0" cy="-62" r="16" fill="#E3943E"/>
+    <path d="M0,-56 A22,22 0 0 1 0,-12 Z M0,-78 A16,16 0 0 1 0,-46 Z" fill="${tone('#E3943E', -.12)}"/>
+    <circle cx="0" cy="-48" r="6" fill="${DK}"/>
+    <rect x="-8" y="-28" width="16" height="4" rx="2" fill="${DK}"/>
+    <path d="M0,-118 L0,-26" stroke="${CREAM}" stroke-width="1"/>`
+};
+
+/* ---------- 分類與裝備資料 ---------- */
+const CATS = [
+  { id: 'transport', name: '交通' }, { id: 'shelter', name: '住宿' }, { id: 'furniture', name: '家具' },
+  { id: 'kitchen', name: '炊事' }, { id: 'light', name: '照明' }, { id: 'fun', name: '氛圍' }
+];
+const ITEMS = [
+  { id: 'car', cat: 'transport', name: '汽車', w: 230, h: 104, pos: [150, 410], max: 1, colors: TRI, def: 'sand', pack: ['駕照與行照', '車用充電線', '備用鑰匙'] },
+  { id: 'scooter', cat: 'transport', name: '機車', w: 168, h: 128, pos: [150, 410], max: 1, colors: TRI, def: 'sage', pack: ['安全帽', '雨衣', '行李綁帶'] },
+  { id: 'camper', cat: 'transport', name: '露營車', w: 304, h: 168, pos: [170, 410], max: 1, colors: TRI, def: 'blue', pack: ['外接電源線', '水管', '汙水處理用品'] },
+  { id: 'dome', cat: 'shelter', name: '圓頂帳', w: 264, h: 134, pos: [630, 415], max: 2, colors: TRI, def: 'terra', pack: ['帳篷本體', '營柱', '營釘', '營繩', '營槌', '地布', '睡墊', '睡袋', '枕頭'] },
+  { id: 'tunnel', cat: 'shelter', name: '隧道帳', w: 312, h: 116, pos: [690, 425], max: 2, colors: TRI, def: 'blue', pack: ['帳篷本體', '營柱', '營釘', '營繩', '營槌', '地布', '睡墊', '睡袋', '枕頭'] },
+  { id: 'tarp', cat: 'shelter', name: '天幕', w: 348, h: 172, pos: [380, 460], max: 2, colors: TRI, def: 'sage', pack: ['天幕布', '天幕營柱 ×2', '營繩', '營釘'] },
+  { id: 'cot', cat: 'shelter', name: '行軍床', w: 160, h: 60, pos: [880, 430], max: 2, pack: ['行軍床', '睡袋', '枕頭'] },
+  { id: 'table', cat: 'furniture', name: '露營桌', w: 130, h: 68, pos: [430, 520], max: 2, pack: ['露營桌', '桌巾'] },
+  { id: 'chair', cat: 'furniture', name: '折疊椅', w: 68, h: 80, pos: [350, 545], max: 6, colors: TRI, cycle: true, pack: ['折疊椅'] },
+  { id: 'hammock', cat: 'furniture', name: '吊床', w: 212, h: 94, pos: [860, 495], max: 2, pack: ['吊床', '樹帶或吊床架'] },
+  { id: 'stove', cat: 'kitchen', name: '爐具', w: 76, h: 54, pos: [570, 535], max: 1, pack: ['卡式爐', '瓦斯罐 ×2', '打火機'] },
+  { id: 'pot', cat: 'kitchen', name: '鍋具', w: 84, h: 94, pos: [635, 540], max: 1, pack: ['鍋具組', '餐具', '砧板與刀', '洗碗精與菜瓜布'] },
+  { id: 'cooler', cat: 'kitchen', name: '冰桶', w: 102, h: 80, pos: [710, 550], max: 1, pack: ['冰桶', '保冷劑', '食材與飲料'] },
+  { id: 'lantern', cat: 'light', name: '營燈', w: 60, h: 66, pos: [530, 490], max: 2, pack: ['營燈', '備用電池'] },
+  { id: 'string', cat: 'light', name: '串燈', w: 236, h: 116, pos: [870, 400], max: 2, pack: ['串燈', '延長線'] },
+  { id: 'fire', cat: 'fun', name: '營火', w: 108, h: 86, pos: [500, 578], max: 1, pack: ['焚火台', '木柴', '火種', '防火手套'] },
+  { id: 'dog', cat: 'fun', name: '狗狗', w: 104, h: 72, pos: [140, 575], max: 1, colors: DOGC, pack: ['牽繩', '狗碗', '飼料', '拾便袋'] },
+  { id: 'guitar', cat: 'fun', name: '吉他', w: 44, h: 134, pos: [235, 565], max: 1, pack: ['吉他', '琴袋'] }
+];
+const ITEM = Object.fromEntries(ITEMS.map(i => [i.id, i]));
+const BASE = ['頭燈', '急救包', '防蚊液', '垃圾袋', '行動電源', '換洗衣物', '盥洗用品', '衛生紙'];
+const GROUND_TOP = 365, GROUND_BOTTOM = 590;
+const OFFS = [0, 70, -70, 140, -140, 210];
+
+/* ---------- 場地背景（扁平色塊、三角形紋理、雙色山、三角樹、木柵欄） ---------- */
+function confetti(seed, n, x0, y0, x1, y1, col){
+  const r = rng(seed); let out = '';
+  for (let i = 0; i < n; i++) {
+    const x = x0 + r() * (x1 - x0), y = y0 + r() * (y1 - y0), s = 5 + r() * 6, a = r() * 360;
+    out += `<path d="M0,${-s} L${s * .9},${s * .6} L${-s * .9},${s * .6} Z" transform="translate(${x.toFixed(1)},${y.toFixed(1)}) rotate(${a.toFixed(0)})" fill="${col}"/>`;
+  }
+  return out;
+}
+// 雙色山：左半亮面、右半暗面
+const mount = (cx, base, w, h, light, dark, cap) => `<path d="M${cx - w / 2},${base} L${cx},${base - h} L${cx},${base} Z" fill="${light}"/><path d="M${cx},${base - h} L${cx + w / 2},${base} L${cx},${base} Z" fill="${dark}"/>` +
+  (cap ? `<path d="M${cx},${base - h} L${cx + w * .09},${base - h * .82} L${cx + w * .03},${base - h * .85} L${cx},${base - h * .78} L${cx - w * .04},${base - h * .84} L${cx - w * .09},${base - h * .82} Z" fill="${cap}"/>` : '');
+// 三角樹：細樹幹延伸進樹冠
+function ttree(x, y, s, col, trunk){
+  return `<g transform="translate(${x.toFixed(1)},${y.toFixed(1)}) scale(${s.toFixed(2)})"><path d="M0,-86 L24,-16 L-24,-16 Z" fill="${col}"/><path d="M0,0 L0,-60 M0,-34 L-9,-44 M0,-46 L7,-54" ${L(3, trunk)}/></g>`;
+}
+function trees(seed, n, y0, jit, cols, trunk, smin, smax){
+  const r = rng(seed); let out = '';
+  for (let i = 0; i < n; i++) {
+    const x = (i + .4) * (1000 / n) + r() * 20 - 10, y = y0 + r() * jit, s = smin + r() * (smax - smin);
+    out += ttree(x, y, s, cols[i % cols.length], trunk);
+  }
+  return out;
+}
+// 鋸齒草邊
+function zigzag(y, h, step, col){
+  let d = `M0,${y}`;
+  for (let x = 0; x <= 1000; x += step) d += ` L${x + step / 2},${y - h} L${x + step},${y}`;
+  return `<path d="${d} L1000,${y + 14} L0,${y + 14} Z" fill="${col}"/>`;
+}
+function fence(y, col, x0 = 0, x1 = 1000){
+  let posts = '';
+  for (let x = x0 + 12; x < x1; x += 44) posts += `M${x},${y} L${x},${y - 30} `;
+  return `<path d="${posts}" ${L(5, col)}/><path d="M${x0},${y - 22} L${x1},${y - 22} M${x0},${y - 10} L${x1},${y - 10}" ${L(4, col)}/>`;
+}
+const sign = (x, y, board, arrow) => `<path d="M${x},${y} L${x},${y - 64}" ${L(5, '#8A6A4F')}/><rect x="${x - 34}" y="${y - 78}" width="68" height="30" rx="3" fill="${board}"/><path d="M${x - 20},${y - 63} L${x + 18},${y - 63} M${x - 20},${y - 63} L${x - 10},${y - 71} M${x - 20},${y - 63} L${x - 10},${y - 55}" ${L(4, arrow)}/>`;
+
+const SCENES = {
+  grass: { name: '草地', draw: () => `
+    <rect width="1000" height="600" fill="#EEDDC4"/>
+    ${confetti(1, 110, 0, 0, 1000, 320, '#E4CFB0')}
+    ${mount(140, 334, 380, 190, '#5DAE7C', '#3E9466')}${mount(470, 334, 320, 140, '#7CC08A', '#5DAE7C')}${mount(800, 334, 440, 220, '#5DAE7C', '#3E9466')}
+    ${trees(11, 22, 330, 14, ['#8DCB7C', '#5DAE73', '#A6D58C'], '#6B4E36', .55, .8)}
+    ${fence(342, '#E9D2AE')}
+    <rect y="336" width="1000" height="264" fill="#A9D27F"/>
+    ${zigzag(346, 10, 24, '#8CC46B')}
+    ${confetti(2, 80, 0, 368, 1000, 600, '#99C872')}
+    ${sign(950, 372, '#F7F0E3', '#3E9466')}` },
+  lake: { name: '湖邊', draw: () => `
+    <rect width="1000" height="600" fill="#F5E6C8"/>
+    ${confetti(3, 100, 0, 0, 1000, 290, '#EAD6B2')}
+    ${mount(170, 300, 400, 170, '#6C9BD0', '#3E70AA', '#F7F0E3')}${mount(540, 300, 320, 120, '#8DB3DD', '#6C9BD0')}${mount(860, 300, 420, 190, '#6C9BD0', '#3E70AA', '#F7F0E3')}
+    ${trees(21, 26, 302, 8, ['#2F7FB0', '#3E9AC4', '#2A6E9C'], '#D0604E', .5, .7)}
+    <rect y="296" width="1000" height="64" fill="#4DBFAE"/>
+    <path d="M90,312 l70,0 M380,322 l100,0 M700,312 l80,0 M240,338 l60,0 M590,342 l90,0 M850,334 l60,0" ${L(4, '#86D9CC')}/>
+    <rect y="350" width="1000" height="250" fill="#A9D27F"/>
+    ${zigzag(354, 10, 24, '#8CC46B')}
+    ${confetti(4, 80, 0, 372, 1000, 600, '#99C872')}
+    <path d="M30,360 L30,330 M42,360 L46,326 M54,360 L50,334 M960,358 L960,330 M972,358 L976,326" ${L(4, '#3E9466')}/>` },
+  summit: { name: '山頂', draw: () => `
+    <rect width="1000" height="600" fill="#F4B640"/>
+    ${confetti(5, 110, 0, 0, 1000, 300, '#F7C55C')}
+    ${mount(120, 318, 360, 200, '#F08F3E', '#E0752E', '#FBEFD9')}${mount(430, 318, 300, 150, '#F4A24A', '#F08F3E')}${mount(760, 318, 460, 240, '#F08F3E', '#E0752E', '#FBEFD9')}
+    ${mount(300, 336, 340, 110, '#E0605A', '#C94E4A')}${mount(640, 336, 300, 90, '#E8766C', '#E0605A')}${mount(940, 336, 280, 120, '#E0605A', '#C94E4A')}
+    ${Array.from({ length: 18 }, (_, i) => `<circle cx="${i * 60}" cy="${332 + (i % 2) * 6}" r="${30 + (i % 3) * 6}" fill="#FBEFD9"/>`).join('')}
+    <rect y="340" width="1000" height="260" fill="#E8D2AE"/>
+    ${zigzag(346, 9, 22, '#D9BF95')}
+    ${confetti(6, 70, 0, 368, 1000, 600, '#DEC59F')}
+    ${ttree(40, 378, .9, '#3E9466', '#6B4E36')}${ttree(78, 372, .7, '#5DAE73', '#6B4E36')}
+    ${sign(930, 378, '#F7F0E3', '#E0752E')}` }
+};
+
+/* ---------- 狀態 ---------- */
+const KEY = 'my-little-camp-v1';
+const STACK = { stove: -34, pot: 16, lantern: 48 };      // 可放到桌上的裝備與預設位置（桌面座標）
+const HIT = new Set(['table', 'chair', 'cot', 'guitar', 'lantern', 'stove', 'pot', 'dog', 'fire']); // 鏤空物件加上整塊可點範圍
+const TABLE_TOP = 62, TABLE_HALF = 52;
+let state = { scene: 'grass', objects: [], nid: 1, checked: [], name: '', custom: {}, removed: [] };
+let ui = { tab: 'transport', view: 'build', sel: null, anim: null, adding: null };
+let drag = null;
+
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+function load(){
+  try {
+    const d = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if (d && Array.isArray(d.objects)) {
+      state.scene = SCENES[d.scene] ? d.scene : 'grass';
+      state.objects = d.objects.filter(o => ITEM[o.type]).map(o => ({
+        id: String(o.id), type: o.type, x: clamp(+o.x || 500, 30, 970), y: clamp(+o.y || 450, GROUND_TOP, GROUND_BOTTOM + 1),
+        color: o.color || null, flip: !!o.flip, on: o.on || null, rx: +o.rx || 0 }));
+      state.objects.forEach(o => { if (o.on && !tableOf(o)) o.on = null; });
+      state.nid = Math.max(+d.nid || 1, state.objects.length + 1);
+      state.checked = Array.isArray(d.checked) ? d.checked : [];
+      state.name = typeof d.name === 'string' ? d.name.slice(0, 20) : '';
+      state.custom = d.custom && typeof d.custom === 'object' ? d.custom : {};
+      state.removed = Array.isArray(d.removed) ? d.removed : [];
+    }
+  } catch (e) {}
+}
+
+/* ---------- 場景繪製 ---------- */
+const svg = $('#scene'), objLayer = $('#objs');
+const scaleAt = y => .75 + .25 * clamp((y - GROUND_TOP) / (GROUND_BOTTOM - GROUND_TOP), 0, 1);
+const colorHex = (item, key) => { const c = (item.colors || []).find(c => c[0] === key) || (item.colors || [])[0]; return c ? c[1] : null; };
+const countOf = type => state.objects.filter(o => o.type === type).length;
+const byId = id => state.objects.find(o => o.id === id);
+const tableOf = o => o.on ? state.objects.find(t => t.id === o.on && t.type === 'table') : null;
+const liftOf = o => { const t = tableOf(o); return t ? TABLE_TOP * scaleAt(t.y) : 0; };
+const sorted = () => [...state.objects].sort((a, b) => a.y - b.y);
+
+function syncRider(o){
+  const t = tableOf(o); if (!t) return;
+  const ts = scaleAt(t.y);
+  o.x = t.x + o.rx * ts;
+  o.y = t.y + .1 + (STACK[o.type] + 60) / 10000;   // 永遠畫在桌子前面
+}
+function transformOf(o){
+  const s = (o.on ? scaleAt(tableOf(o).y) * .8 : scaleAt(o.y)) * (drag && drag.id === o.id && drag.moved ? 1.05 : 1);
+  return `translate(${o.x.toFixed(1)},${(o.y - liftOf(o)).toFixed(1)}) scale(${s.toFixed(3)})`;
+}
+function objMarkup(o){
+  const it = ITEM[o.type];
+  const art = DRAW[o.type](colorHex(it, o.color));
+  const hit = HIT.has(o.type) ? `<rect x="${-it.w / 2}" y="${-it.h}" width="${it.w}" height="${it.h}" fill="#000" fill-opacity="0"/>` : '';
+  const surf = o.type === 'table' ? `<ellipse class="surf" cx="0" cy="${-TABLE_TOP}" rx="${TABLE_HALF + 14}" ry="9"/>` : '';
+  const sel = ui.sel === o.id ? `<rect class="sel" x="${-it.w / 2 - 10}" y="${-it.h - 10}" width="${it.w + 20}" height="${it.h + 18}" rx="10"/>` : '';
+  const shadow = o.on ? '' : `<ellipse cx="0" cy="0" rx="${(it.w * .42).toFixed(0)}" ry="8" fill="rgba(74,69,64,.16)"/>`;
+  return `<g class="obj" data-id="${o.id}" transform="${transformOf(o)}">
+    <g class="anim${ui.anim && ui.anim.id === o.id ? ' ' + ui.anim.cls : ''}">${shadow}<g transform="scale(${o.flip ? -1 : 1},1)">${hit}${art}</g>${surf}</g>${sel}</g>`;
+}
+function renderBg(){ $('#bg').innerHTML = SCENES[state.scene].draw(); }
+function renderObjs(){
+  objLayer.innerHTML = sorted().map(objMarkup).join('');
+  ui.anim = null;
+  $('#hint').style.display = state.objects.length || ui.view === 'done' ? 'none' : '';
+}
+function boxOf(id){
+  const n = nodeOf(id); if (!n) return null;
+  const sel = n.querySelector('.sel');
+  return (sel || n).getBoundingClientRect();
+}
+function overlaps(a, b){
+  const r1 = boxOf(a), r2 = boxOf(b); if (!r1 || !r2) return false;
+  const w = Math.min(r1.right, r2.right) - Math.max(r1.left, r2.left);
+  const h = Math.min(r1.bottom, r2.bottom) - Math.max(r1.top, r2.top);
+  return w > 6 && h > 6;
+}
+function nodeOf(id){ return objLayer.querySelector(`.obj[data-id="${id}"]`); }
+// 果凍效果：每次播放前先移除舊的動畫 class，播完自動移除，避免調整圖層順序時重複播放
+function play(id, cls){
+  const n = nodeOf(id), g = n && n.querySelector('.anim'); if (!g) return;
+  g.classList.remove('pop', 'grab', 'jelly', 'swap'); void g.getBoundingClientRect(); g.classList.add(cls);
+}
+objLayer.addEventListener('animationend', e => { if (e.target.classList.contains('anim')) e.target.classList.remove('pop', 'grab', 'jelly', 'swap'); });
+function updateNode(o){
+  const n = nodeOf(o.id); if (n) n.setAttribute('transform', transformOf(o));
+  if (o.type === 'table') state.objects.filter(r => r.on === o.id).forEach(r => { syncRider(r); const rn = nodeOf(r.id); if (rn) rn.setAttribute('transform', transformOf(r)); });
+  const order = sorted().map(x => x.id), cur = [...objLayer.children].map(n => n.dataset.id);
+  if (order.join() !== cur.join()) {
+    // 找出跟拖曳物件交換了前後順序的物件
+    let crossed = [];
+    if (drag && drag.moved && drag.id === o.id) {
+      const oi = cur.indexOf(o.id), ni = order.indexOf(o.id);
+      crossed = order.filter(id => id !== o.id && cur.indexOf(id) !== -1 && ((cur.indexOf(id) < oi) !== (order.indexOf(id) < ni)));
+    }
+    order.forEach(id => { const nn = nodeOf(id); if (nn) objLayer.appendChild(nn); });
+    // 穿越回饋：只有畫面上真的重疊、穿過去的時候才縮放，空地上移動不觸發
+    if (crossed.some(id => overlaps(o.id, id))) play(o.id, 'swap');
+  }
+}
+
+/* ---------- 工具列（固定在場景上方中央，不遮住物件） ---------- */
+const tool = $('#tool');
+function renderTool(){
+  const o = byId(ui.sel);
+  if (!o || ui.view !== 'build') { tool.classList.remove('show'); return; }
+  const it = ITEM[o.type];
+  const dots = it.colors ? it.colors.map(([k, hex, nm]) =>
+    `<button class="dot${o.color === k ? ' on' : ''}" style="background:${hex}" data-color="${k}" title="${nm}" aria-label="換成${nm}"></button>`).join('') + '<span class="sep"></span>' : '';
+  tool.innerHTML = `<span class="nm">${it.name}${o.on ? '（桌上）' : ''}</span>${dots}<button class="tbtn" data-act="flip">↔ 翻轉</button><button class="tbtn del" data-act="del">✕ 刪除</button>`;
+  tool.classList.add('show');
+}
+tool.addEventListener('click', e => {
+  const o = byId(ui.sel); if (!o) return;
+  const t = e.target.closest('button'); if (!t) return;
+  if (t.dataset.color) { o.color = t.dataset.color; }
+  else if (t.dataset.act === 'flip') { o.flip = !o.flip; }
+  else if (t.dataset.act === 'del') { removeObj(o.id); return; }
+  ui.anim = { id: o.id, cls: 'jelly' };
+  save(); renderObjs(); renderTool();
+});
+function removeObj(id){
+  const snap = JSON.stringify(state.objects);
+  const o = byId(id), name = o ? ITEM[o.type].name : '';
+  state.objects = state.objects.filter(x => x.id !== id);
+  state.objects.forEach(r => { if (r.on === id) { r.on = null; r.y = clamp(r.y + 8, GROUND_TOP, GROUND_BOTTOM); } });
+  ui.sel = null; save(); renderAll();
+  toast(`已刪除${name}`, '復原', () => { state.objects = JSON.parse(snap); save(); renderAll(); });
+}
+
+/* ---------- 選取與拖曳 ---------- */
+function select(id){ ui.sel = id; renderObjs(); renderTool(); renderSteps(); }
+function toSvg(e){
+  const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+  return pt.matrixTransform(svg.getScreenCTM().inverse());
+}
+function tableUnder(o, nx, ny){
+  let best = null;
+  state.objects.forEach(t => {
+    if (t.type !== 'table' || t.id === o.id) return;
+    const ts = scaleAt(t.y), top = t.y - TABLE_TOP * ts;
+    if (Math.abs(nx - t.x) <= (TABLE_HALF + 10) * ts && ny >= top - 34 * ts && ny <= top + 24 * ts && (!best || t.y > best.y)) best = t;
+  });
+  return best;
+}
+function markTables(target){
+  objLayer.querySelectorAll('.obj').forEach(n => {
+    const t = byId(n.dataset.id); if (!t || t.type !== 'table') return;
+    n.classList.toggle('droppable', target !== undefined);
+    n.classList.toggle('drop', !!target && target.id === t.id);
+  });
+}
+svg.addEventListener('pointerdown', e => {
+  if (ui.view !== 'build' || e.button > 0) return;
+  const g = e.target.closest('.obj');
+  if (!g) { if (ui.sel) select(null); return; }
+  const o = byId(g.dataset.id); if (!o) return;
+  const p = toSvg(e);
+  drag = { id: o.id, dx: p.x - o.x, dy: p.y - (o.y - liftOf(o)), moved: false, sx: e.clientX, sy: e.clientY, pid: e.pointerId };
+  if (ui.sel !== o.id) select(o.id);
+  try { svg.setPointerCapture(e.pointerId); } catch (err) {}
+  e.preventDefault();
+});
+svg.addEventListener('pointermove', e => {
+  if (!drag || e.pointerId !== drag.pid) return;
+  const o = byId(drag.id); if (!o) { drag = null; return; }
+  if (!drag.moved) {
+    if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 4) return;
+    drag.moved = true;
+    const n = nodeOf(o.id); if (n) n.classList.add('dragging');
+    play(o.id, 'grab');
+  }
+  const p = toSvg(e), nx = p.x - drag.dx, ny = p.y - drag.dy;
+  if (STACK[o.type] !== undefined) {
+    const t = tableUnder(o, nx, ny);
+    if (t) {
+      const ts = scaleAt(t.y);
+      o.on = t.id; o.rx = clamp((nx - t.x) / ts, -TABLE_HALF + 10, TABLE_HALF - 10); syncRider(o);
+    } else {
+      o.on = null; o.x = clamp(nx, 30, 970); o.y = clamp(ny, GROUND_TOP, GROUND_BOTTOM);
+    }
+    markTables(t || null);
+  } else {
+    o.x = clamp(nx, 30, 970); o.y = clamp(ny, GROUND_TOP, GROUND_BOTTOM);
+  }
+  updateNode(o);
+});
+function endDrag(){
+  if (!drag) return;
+  const moved = drag.moved, o = byId(drag.id);
+  drag = null;
+  markTables(undefined);
+  if (o && moved) {
+    const n = nodeOf(o.id); if (n) n.classList.remove('dragging');
+    updateNode(o); save(); play(o.id, 'jelly');
+    if (STACK[o.type] !== undefined && o.on) toast(`${ITEM[o.type].name}已放到桌上`);
+  }
+  renderTool();
+}
+svg.addEventListener('pointerup', endDrag);
+svg.addEventListener('pointercancel', endDrag);
+svg.addEventListener('lostpointercapture', endDrag);
+document.addEventListener('keydown', e => {
+  if (/INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
+  if ((e.key === 'Delete' || e.key === 'Backspace') && ui.sel && ui.view === 'build') { e.preventDefault(); removeObj(ui.sel); }
+  if (e.key === 'Escape' && ui.sel) select(null);
+});
+
+/* ---------- 加入裝備 ---------- */
+function addItem(id){
+  const it = ITEM[id];
+  if (it.cat === 'transport') {
+    const ex = state.objects.find(o => ITEM[o.type].cat === 'transport');
+    if (ex) {
+      if (ex.type === id) { toast('交通工具只能選一個'); select(ex.id); return; }
+      ex.type = id; ui.anim = { id: ex.id, cls: 'pop' }; ui.sel = ex.id;
+      ex.color = it.colors ? (it.def || it.colors[0][0]) : null;
+      save(); renderAll(); toast(`已換成${it.name}`); return;
+    }
+  }
+  const k = countOf(id);
+  if (k >= it.max) { toast(`${it.name}最多 ${it.max} 個`); return; }
+  const o = { id: 'o' + (state.nid++), type: id, x: clamp(it.pos[0] + OFFS[k], 40, 960), y: it.pos[1],
+    color: it.colors ? (it.cycle ? it.colors[k % it.colors.length][0] : (it.def || it.colors[0][0])) : null, flip: false, on: null, rx: 0 };
+  // 有桌子的話，燈具、爐具、鍋具直接放到桌上
+  const table = STACK[id] !== undefined && state.objects.find(t => t.type === 'table');
+  if (table) { o.on = table.id; o.rx = STACK[id]; syncRider(o); }
+  state.objects.push(o);
+  ui.anim = { id: o.id, cls: 'pop' }; ui.sel = o.id;
+  save(); renderAll();
+}
+
+/* ---------- 下方面板 ---------- */
+function iconSvg(it){
+  return `<svg viewBox="${-it.w / 2 - 8} ${-it.h - 8} ${it.w + 16} ${it.h + 16}" aria-hidden="true">${DRAW[it.id](colorHex(it, it.colors ? (it.def || it.colors[0][0]) : null))}</svg>`;
+}
+function renderPanel(){
+  const tabs = [{ id: 'scene', name: '場地' }, ...CATS];
+  $('#tabs').innerHTML = tabs.map(t => `<button class="tab${ui.tab === t.id ? ' on' : ''}" data-tab="${t.id}">${t.name}</button>`).join('');
+  if (ui.tab === 'scene') {
+    $('#cards').innerHTML = Object.entries(SCENES).map(([k, s]) =>
+      `<button class="card scene${state.scene === k ? ' on' : ''}" data-scene="${k}"><svg viewBox="0 0 1000 600" aria-hidden="true">${s.draw()}</svg><div class="cn">${s.name}</div></button>`).join('');
+    $('#panelNote').textContent = '切換場地時，已放好的裝備會保留在原位。';
+  } else {
+    $('#cards').innerHTML = ITEMS.filter(i => i.cat === ui.tab).map(it => {
+      const n = countOf(it.id), full = it.cat !== 'transport' && n >= it.max;
+      return `<button class="card${full ? ' max' : ''}" data-item="${it.id}" aria-label="加入${it.name}">${n ? `<span class="badge">×${n}</span>` : ''}${iconSvg(it)}<div class="cn">${it.name}</div></button>`;
+    }).join('');
+    const notes = {
+      transport: '交通工具只能選一個，選新的會替換掉原本的。',
+      kitchen: '爐具和鍋具可以拖到露營桌上；營地裡有桌子時，會直接放到桌上。',
+      light: '營燈可以拖到露營桌上；營地裡有桌子時，會直接放到桌上。'
+    };
+    $('#panelNote').textContent = notes[ui.tab] || '點選加入營地，在場景裡拖曳調整位置；點一下物件可以換色、翻轉或刪除。';
+  }
+}
+$('#tabs').addEventListener('click', e => { const t = e.target.closest('[data-tab]'); if (!t) return; ui.tab = t.dataset.tab; renderPanel(); renderSteps(); });
+$('#cards').addEventListener('click', e => {
+  const c = e.target.closest('.card'); if (!c) return;
+  if (c.dataset.scene) { state.scene = c.dataset.scene; save(); renderBg(); renderPanel(); return; }
+  if (c.dataset.item) addItem(c.dataset.item);
+});
+
+/* ---------- 步驟指示 ---------- */
+function renderSteps(){
+  const cur = ui.view === 'done' ? 4 : ui.sel ? 3 : ui.tab === 'scene' ? 1 : 2;
+  document.querySelectorAll('#steps button').forEach(b => b.classList.toggle('on', +b.dataset.step === cur));
+}
+$('#steps').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const s = +b.dataset.step;
+  if (s === 4) { goDone(); return; }
+  if (ui.view === 'done') setView('build');
+  if (s === 1) ui.tab = 'scene';
+  if (s === 2 && ui.tab === 'scene') ui.tab = 'transport';
+  if (s === 3 && !state.objects.length) toast('先放一些裝備，再點選場景裡的物件調整');
+  else if (s === 3 && !ui.sel) toast('點一下場景裡的物件，就可以拖曳、換色或刪除');
+  renderAll();
+});
+
+/* ---------- 打包清單 ---------- */
+const GROUPS = [{ id: 'base', name: '基本必備' }, ...CATS, { id: 'other', name: '其他' }];
+function buildList(){
+  const seen = new Set(), groups = [];
+  const take = label => { if (seen.has(label) || state.removed.includes(label)) return false; seen.add(label); return true; };
+  GROUPS.forEach(g => {
+    const items = [];
+    if (g.id === 'base') BASE.forEach(l => { if (take(l)) items.push({ label: l }); });
+    ITEMS.filter(i => i.cat === g.id).forEach(it => {
+      const n = countOf(it.id); if (!n) return;
+      it.pack.forEach(p => { const l = it.id === 'chair' ? `折疊椅 ×${n}` : p; if (take(l)) items.push({ label: l }); });
+    });
+    (state.custom[g.id] || []).forEach(l => { if (!seen.has(l)) { seen.add(l); items.push({ label: l, custom: true }); } });
+    if (items.length || g.id === 'base' || g.id === 'other') groups.push({ id: g.id, name: g.name, items });
+  });
+  return groups;
+}
+function renderDone(){
+  const groups = buildList();
+  $('#groups').innerHTML = groups.map(g => `<div class="group" data-group="${g.id}"><h3>${g.name}</h3>${g.items.map(({ label }) => {
+    const ok = state.checked.includes(label), t = esc(label);
+    return `<div class="row"><label class="check${ok ? ' ok' : ''}"><input type="checkbox" data-item="${t}"${ok ? ' checked' : ''}><span>${t}</span></label><button class="rm" data-rm="${t}" title="刪除" aria-label="刪除${t}">✕</button></div>`;
+  }).join('')}${ui.adding === g.id
+    ? `<form class="addf" data-group="${g.id}"><input maxlength="30" placeholder="輸入項目，按 Enter 加入" aria-label="新增到${g.name}"><button type="submit">加入</button></form>`
+    : `<button class="add" data-add="${g.id}"><b>+</b>新增項目</button>`}</div>`).join('');
+  updateProgress(groups);
+  $('#fireNote').hidden = !countOf('fire');
+  $('#campName').value = state.name;
+  const r = state.removed.length;
+  $('#btnRestore').hidden = !r;
+  $('#btnRestore').textContent = `恢復已刪除的預設項目（${r}）`;
+  const f = $('#groups .addf input'); if (f) f.focus();
+}
+function updateProgress(groups = buildList()){
+  const all = groups.flatMap(g => g.items.map(i => i.label)), done = all.filter(t => state.checked.includes(t)).length;
+  $('#progText').textContent = `已打包 ${done} / ${all.length}`;
+  $('#progBar').style.width = (all.length ? done / all.length * 100 : 0) + '%';
+}
+$('#groups').addEventListener('change', e => {
+  const t = e.target.dataset.item; if (t === undefined) return;
+  state.checked = state.checked.filter(x => x !== t);
+  if (e.target.checked) state.checked.push(t);
+  e.target.closest('.check').classList.toggle('ok', e.target.checked);
+  save(); updateProgress();
+});
+$('#groups').addEventListener('click', e => {
+  const add = e.target.closest('[data-add]');
+  if (add) { ui.adding = add.dataset.add; renderDone(); return; }
+  const rm = e.target.closest('[data-rm]');
+  if (rm) {
+    const label = rm.dataset.rm, snap = JSON.stringify({ custom: state.custom, removed: state.removed, checked: state.checked });
+    let wasCustom = false;
+    Object.keys(state.custom).forEach(k => { if (state.custom[k].includes(label)) { state.custom[k] = state.custom[k].filter(x => x !== label); wasCustom = true; } });
+    if (!wasCustom) state.removed.push(label);
+    state.checked = state.checked.filter(x => x !== label);
+    save(); renderDone();
+    toast(`已刪除「${label}」`, '復原', () => { Object.assign(state, JSON.parse(snap)); save(); renderDone(); });
+  }
+});
+$('#groups').addEventListener('submit', e => {
+  e.preventDefault();
+  const f = e.target, g = f.dataset.group, input = f.querySelector('input'), label = input.value.trim().slice(0, 30);
+  if (!label) { ui.adding = null; renderDone(); return; }
+  const exists = buildList().some(gr => gr.items.some(i => i.label === label));
+  if (exists) { toast(`清單裡已經有「${label}」了`); input.select(); return; }
+  state.removed = state.removed.filter(x => x !== label);
+  (state.custom[g] = state.custom[g] || []).push(label);
+  save(); renderDone();            // 保持輸入框開著，方便連續新增
+});
+$('#groups').addEventListener('keydown', e => {
+  if (e.key === 'Escape' && e.target.closest('.addf')) { ui.adding = null; renderDone(); }
+});
+$('#groups').addEventListener('focusout', e => {
+  const f = e.target.closest('.addf'); if (!f) return;
+  setTimeout(() => {
+    if (ui.adding && !f.contains(document.activeElement) && !f.querySelector('input').value.trim()) { ui.adding = null; renderDone(); }
+  }, 150);
+});
+$('#btnRestore').addEventListener('click', () => { state.removed = []; save(); renderDone(); toast('已恢復預設項目'); });
+$('#campName').addEventListener('input', e => { state.name = e.target.value.slice(0, 20); save(); renderBar(); });
+function listText(){
+  const name = state.name.trim() || '我的小營地';
+  return `【${name}】打包清單\n` + buildList().filter(g => g.items.length).map(g => `\n■ ${g.name}\n` + g.items.map(({ label }) => `${state.checked.includes(label) ? '☑' : '☐'} ${label}`).join('\n')).join('\n');
+}
+$('#btnCopy').addEventListener('click', async () => {
+  const text = listText();
+  try { await navigator.clipboard.writeText(text); toast('已複製清單，可以貼到 LINE 或記事本'); }
+  catch (e) {
+    const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); toast('已複製清單'); } catch (e2) { toast('無法複製，請手動選取'); }
+    ta.remove();
+  }
+});
+$('#btnPrint').addEventListener('click', () => window.print());
+
+/* ---------- 下載圖片 ---------- */
+$('#btnPng').addEventListener('click', () => {
+  const name = state.name.trim() || '我的小營地';
+  const clone = svg.cloneNode(true);
+  clone.querySelectorAll('.sel,.surf').forEach(n => n.remove());
+  clone.setAttribute('width', '2000'); clone.setAttribute('height', '1200');
+  const tw = [...name].reduce((s, ch) => s + (/[\u0000-ÿ]/.test(ch) ? 16 : 28), 0) + 48;
+  const label = `<g><rect x="24" y="22" rx="20" width="${tw}" height="52" fill="#F6F2EC" opacity=".92"/><text x="48" y="57" font-size="28" font-weight="700" fill="#4A4540" font-family="system-ui,-apple-system,'PingFang TC','Noto Sans TC','Microsoft JhengHei',sans-serif">${esc(name)}</text></g>`;
+  const s = new XMLSerializer().serializeToString(clone).replace(/<\/svg>\s*$/, label + '</svg>');
+  const img = new Image();
+  img.onload = () => {
+    const cv = document.createElement('canvas'); cv.width = 2000; cv.height = 1200;
+    cv.getContext('2d').drawImage(img, 0, 0, 2000, 1200);
+    cv.toBlob(b => {
+      if (!b) { toast('圖片產生失敗'); return; }
+      const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `${name}.png`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      toast('已下載營地圖片');
+    }, 'image/png');
+  };
+  img.onerror = () => toast('圖片產生失敗');
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s);
+});
+
+/* ---------- 畫面切換 ---------- */
+function renderBar(){
+  if (ui.view === 'done') {
+    $('#barLeft').innerHTML = `<h2>${esc(state.name.trim() || '我的小營地')}</h2>`;
+  } else {
+    const n = state.objects.length;
+    $('#barLeft').innerHTML = `<span class="label">${n ? `營地裡有 ${n} 件裝備` : '營地預覽'}</span>`;
+  }
+  $('#acts').style.display = ui.view === 'done' ? 'none' : '';
+  $('#btnDone').disabled = !state.objects.length;
+  $('#btnClear').disabled = !state.objects.length;
+}
+function setView(v){ ui.view = v; document.body.classList.toggle('view-done', v === 'done'); }
+function goDone(){
+  if (!state.objects.length) { toast('先放一些裝備到營地吧'); return; }
+  ui.sel = null; ui.adding = null; setView('done'); renderAll(); renderDone();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+$('#btnDone').addEventListener('click', goDone);
+$('#btnBack').addEventListener('click', () => { setView('build'); renderAll(); });
+// 清空不用跳出確認視窗（在部分環境會被擋掉），改成直接清空並提供「復原」
+$('#btnClear').addEventListener('click', () => {
+  if (!state.objects.length) return;
+  const snap = JSON.stringify(state.objects);
+  state.objects = []; ui.sel = null; save(); renderAll();
+  toast('已清空營地', '復原', () => { state.objects = JSON.parse(snap); save(); renderAll(); }, 5000);
+});
+
+let toastTimer, toastAction = null;
+const toastEl = $('#toast'), toastBtn = toastEl.querySelector('button');
+function toast(msg, actLabel, actFn, ms){
+  toastEl.querySelector('span').textContent = msg;
+  toastAction = actFn || null;
+  toastBtn.hidden = !actFn; toastBtn.textContent = actLabel || '';
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => toastEl.classList.remove('show'), ms || (actFn ? 4500 : 1800));
+}
+toastBtn.addEventListener('click', () => {
+  if (toastAction) toastAction();
+  toastAction = null; toastEl.classList.remove('show');
+});
+
+function renderAll(){ renderObjs(); renderPanel(); renderTool(); renderSteps(); renderBar(); }
+
+/* ---------- 啟動 ---------- */
+load();
+renderBg();
+renderAll();
+</script>
+</body>
+</html>
